@@ -7308,39 +7308,55 @@ static target_timer_t get_timer_id(abi_long arg)
  * Script interpreter handling, kind of nasty.
  * https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/fs/binfmt_script.c
  */
-static abi_long handle_interpreters(char buf[], char** i_arg, char** i_name, int* offset)
+static abi_long handle_interpreters(char buf[], char** i_arg, char** i_name,
+        int* offset)
 {
-	char* cp;
-	if ((buf[0] == '#') && (buf[1] == '!')) {
-		buf[BINPRM_BUF_SIZE - 1] = '\0';
-		if ((cp = strchr(buf, '\n')) == NULL)
-			cp = buf+BINPRM_BUF_SIZE-1;
-		*cp = '\0';
-		while (cp > buf) {
-			cp--;
-			if ((*cp == ' ') || (*cp == '\t'))
-				*cp = '\0';
-			else
-				break;
-		}
-		for (cp = buf+2; (*cp == ' ') || (*cp == '\t'); cp++);
-		if (*cp == '\0')
-			return -ENOEXEC; /* No interpreter name found */
-		*i_name = cp;
-		*i_arg = NULL;
-		for ( ; *cp && (*cp != ' ') && (*cp != '\t'); cp++)
-			/* nothing */ ;
-		while ((*cp == ' ') || (*cp == '\t'))
-			*cp++ = '\0';
-		if (*cp)
-			*i_arg = cp;
+    char* cp;
+    if ((buf[0] == '#') && (buf[1] == '!')) {
+        buf[BINPRM_BUF_SIZE - 1] = '\0';
+        if ((cp = strchr(buf, '\n')) == NULL) {
+            cp = buf + BINPRM_BUF_SIZE - 1;
+        }
 
-		if (*i_arg)
-			*offset = 5;
-		else
-			*offset = 4;
-	}
-	return 0;
+        *cp = '\0';
+
+        while (cp > buf) {
+            cp--;
+            if ((*cp == ' ') || (*cp == '\t')) {
+                *cp = '\0';
+            } else {
+                break;
+            }
+        }
+
+        for (cp = buf + 2; (*cp == ' ') || (*cp == '\t'); cp++)
+            ;
+
+        if (*cp == '\0') {
+            return -ENOEXEC; /* No interpreter name found */
+        }
+
+        *i_name = cp;
+        *i_arg = NULL;
+
+        for (; *cp && (*cp != ' ') && (*cp != '\t'); cp++)
+            ;
+
+        while ((*cp == ' ') || (*cp == '\t')) {
+            *cp++ = '\0';
+        }
+
+        if (*cp) {
+            *i_arg = cp;
+        }
+
+        if (*i_arg) {
+            *offset = 5;
+        } else {
+            *offset = 4;
+        }
+    }
+    return 0;
 }
 
 /*
@@ -7356,14 +7372,16 @@ static abi_long arm_execve(char *filename, char *argv[], char *envp[])
     int fd;
     int ret;
     int i;
-	int offset = 3;
+    int offset = 3;
     char buf[BINPRM_BUF_SIZE];
 
-    for (argc = 0; argv[argc] != NULL; argc++);
+    for (argc = 0; argv[argc] != NULL; argc++)
+        ;
 
     fd = open(filename, O_RDONLY);
-    if (fd == -1)
+    if (fd == -1) {
         return -ENOENT;
+    }
 
     ret = read(fd, buf, BINPRM_BUF_SIZE);
     if (ret == -1) {
@@ -7379,8 +7397,9 @@ static abi_long arm_execve(char *filename, char *argv[], char *envp[])
 
     new_argp = alloca((argc + offset + 1) * sizeof(void *));
 
-    for (i = 0; i < argc; i++)
+    for (i = 0; i < argc; i++) {
         new_argp[i + offset] = argv[i];
+    }
 
     new_argp[0] = strdup("/usr/bin/qemu-aarch64-static");
     new_argp[1] = strdup("-0");
@@ -7391,13 +7410,15 @@ static abi_long arm_execve(char *filename, char *argv[], char *envp[])
         new_argp[2] = i_name;
         new_argp[3] = i_name;
 
-        if (i_arg)
+        if (i_arg) {
             new_argp[4] = i_arg;
+        }
     } else {
         new_argp[2] = argv[0];
     }
 
-    return get_errno(safe_execve("/usr/bin/qemu-aarch64-static", new_argp, envp));
+    return get_errno(
+            safe_execve("/usr/bin/qemu-aarch64-static", new_argp, envp));
 }
 
 /* do_syscall() should always have a single exit point at the end so
